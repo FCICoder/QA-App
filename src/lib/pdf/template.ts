@@ -40,7 +40,7 @@ export function escapeHtml(value: string): string {
 }
 
 // Escape, then keep the user's line breaks.
-function text(value: string): string {
+export function text(value: string): string {
   return escapeHtml(value).replace(/\r?\n/g, "<br>");
 }
 
@@ -92,26 +92,10 @@ function caseBlock(c: PdfCase): string {
   </section>`;
 }
 
-export function renderCasesHtml(doc: PdfDocument): string {
-  const totalSteps = doc.cases.reduce((sum, c) => sum + c.steps.length, 0);
-  const highCount = doc.cases.filter((c) => c.priorityHigh).length;
-
-  const index = doc.cases
-    .map(
-      (c) =>
-        `<tr><td class="ltr key-cell">${text(c.key)}</td><td class="auto">${text(c.title)}</td><td>${
-          c.suite ? text(c.suite) : "—"
-        }</td><td>${c.storyKey ? story(c, false) : "—"}</td><td>${text(c.priority)}</td></tr>`,
-    )
-    .join("");
-
-  return `<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8">
-<title>${text(doc.projectName)}</title>
-<style>
-${doc.fontCss}
+// Shared by every PDF: embedded font, body text, cover, stat boxes and tables.
+// Page size, margins and page numbers are set in render.ts.
+export function baseCss(fontCss: string): string {
+  return `${fontCss}
 @page { size: A4; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -145,7 +129,29 @@ table { width: 100%; border-collapse: collapse; }
 th { text-align: start; font-weight: 600; color: #5B6664; font-size: 9pt; background: #F5F6F4; }
 th, td { border: 1px solid #E2E6E4; padding: 6px 8px; vertical-align: top; }
 thead { display: table-header-group; }
-tr { break-inside: avoid; }
+tr { break-inside: avoid; }`;
+}
+
+export function renderCasesHtml(doc: PdfDocument): string {
+  const totalSteps = doc.cases.reduce((sum, c) => sum + c.steps.length, 0);
+  const highCount = doc.cases.filter((c) => c.priorityHigh).length;
+
+  const index = doc.cases
+    .map(
+      (c) =>
+        `<tr><td class="ltr key-cell">${text(c.key)}</td><td class="auto">${text(c.title)}</td><td>${
+          c.suite ? text(c.suite) : "—"
+        }</td><td>${c.storyKey ? story(c, false) : "—"}</td><td>${text(c.priority)}</td></tr>`,
+    )
+    .join("");
+
+  return `<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>${text(doc.projectName)}</title>
+<style>
+${baseCss(doc.fontCss)}
 .index { margin-bottom: 8px; font-size: 9.5pt; }
 .key-cell { white-space: nowrap; color: #3E4846; }
 

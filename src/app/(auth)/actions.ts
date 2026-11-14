@@ -39,7 +39,7 @@ export async function signup(_prev: AuthState, formData: FormData): Promise<Auth
   });
 
   await createSession(user.id);
-  redirect("/projects");
+  redirect("/dashboard");
 }
 
 export async function login(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -56,7 +56,7 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   }
 
   await createSession(user.id);
-  redirect("/projects");
+  redirect("/dashboard");
 }
 
 export async function logout() {

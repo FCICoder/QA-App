@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { SubmitButton } from "@/components/SubmitButton";
 import { TestCaseForm } from "@/components/TestCaseForm";
 import { getCaseOr404, getProjectOr404 } from "@/lib/access";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { caseKey, formatDateTime } from "@/lib/labels";
 import { firstParam, type SearchParams } from "@/lib/params";
+import { saveToLibrary } from "@/app/(app)/library/actions";
 import { deleteCase, restoreCase, updateCase } from "../actions";
 
 export const metadata: Metadata = { title: "تعديل Test Case" };
@@ -39,6 +41,7 @@ export default async function EditCasePage({
 
   const key = caseKey(testCase.number);
   const saved = firstParam(sp.saved) === "1";
+  const savedToLibrary = firstParam(sp.library) === "1";
   const deleted = testCase.deletedAt !== null;
   const action = updateCase.bind(null, project.id, testCase.id);
 
@@ -56,6 +59,12 @@ export default async function EditCasePage({
           </h1>
         </div>
         <div className="flex flex-wrap gap-2">
+          {!deleted ? (
+            <form action={saveToLibrary}>
+              <input type="hidden" name="caseId" value={testCase.id} />
+              <SubmitButton className="btn-secondary" pendingText="جاري الحفظ…">حفظ في المكتبة</SubmitButton>
+            </form>
+          ) : null}
           <a href={`/api/pdf/case/${testCase.id}`} className="btn-secondary">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
             تحميل PDF
@@ -66,6 +75,12 @@ export default async function EditCasePage({
       {saved ? (
         <p role="status" className="rounded-[10px] border border-pass/30 bg-pass-soft px-4 py-3 text-sm text-pass-ink">
           اتحفظت. دي النسخة رقم {testCase.version}.
+        </p>
+      ) : null}
+
+      {savedToLibrary ? (
+        <p role="status" className="rounded-[10px] border border-pass/30 bg-pass-soft px-4 py-3 text-sm text-pass-ink">
+          اتحفظت نسخة منها في <Link href="/library?tab=mine" className="font-semibold underline">مكتبتك</Link>، وتقدر تنسخها لأي مشروع.
         </p>
       ) : null}
 

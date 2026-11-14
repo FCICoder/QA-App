@@ -44,6 +44,34 @@ enum CaseLanguage {
   EN
 }
 
+enum RunStatus {
+  IN_PROGRESS
+  CLOSED
+}
+
+// Result of one step in a run.
+enum StepResult {
+  UNTESTED
+  PASSED
+  FAILED
+  BLOCKED
+}
+
+// Result of a whole case in a run, derived from its steps.
+enum CaseRunStatus {
+  UNTESTED
+  IN_PROGRESS
+  PASSED
+  FAILED
+  BLOCKED
+}
+
+enum Verdict {
+  READY
+  READY_WITH_NOTES
+  NOT_READY
+}
+
 model User {
   id           String            @id @default(cuid())
   name         String
@@ -54,6 +82,10 @@ model User {
   memberships  Membership[]
   createdCases TestCase[]        @relation("CaseCreatedBy")
   versions     TestCaseVersion[]
+  runsCreated  TestRun[]         @relation("RunCreatedBy")
+  runsClosed   TestRun[]         @relation("RunClosedBy")
+  reports      ClientReport[]
+  libraryItems LibraryItem[]
 }
 
 model Session {
@@ -71,8 +103,10 @@ model Workspace {
   id          String       @id @default(cuid())
   name        String
   createdAt   DateTime     @default(now())
-  memberships Membership[]
-  projects    Project[]
+  memberships  Membership[]
+  projects     Project[]
+  libraryItems LibraryItem[]
+  aiUsage      AiUsage[]
 }
 
 model Membership {
@@ -94,12 +128,15 @@ model Project {
   clientName  String?
   // Last TC number used in this project (TC-001, TC-002, ...).
   caseCounter Int         @default(0)
+  // Last run number used in this project (Run #1, #2, ...).
+  runCounter  Int         @default(0)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   suites      Suite[]
   stories     UserStory[]
   cases       TestCase[]
+  runs        TestRun[]
 
   @@index([workspaceId])
 }
@@ -154,6 +191,7 @@ model TestCase {
   createdBy     User              @relation("CaseCreatedBy", fields: [createdById], references: [id])
   steps         TestStep[]
   versions      TestCaseVersion[]
+  runCases      TestRunCase[]
 
   @@unique([projectId, number])
   @@index([projectId, deletedAt])
@@ -182,4 +220,146 @@ model TestCaseVersion {
   createdBy   User     @relation(fields: [createdById], references: [id])
 
   @@unique([testCaseId, version])
+}
+
+// A test run copies the cases it covers, so editing a case later
+// never changes what a run (or a client report) already shows.
+model TestRun {
+  id          String        @id @default(cuid())
+  projectId   String
+  number      Int
+  name        String
+  environment String?
+  scopeLabel  String
+  status      RunStatus     @default(IN_PROGRESS)
+  createdById String
+  closedById  String?
+  createdAt   DateTime      @default(now())
+  closedAt    DateTime?
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy   User          @relation("RunCreatedBy", fields: [createdById], references: [id])
+  closedBy    User?         @relation("RunClosedBy", fields: [closedById], references: [id])
+  cases       TestRunCase[]
+  report      ClientReport?
+
+  @@unique([projectId, number])
+  @@index([projectId])
+}
+
+model TestRunCase {
+  id            String        @id @default(cuid())
+  runId         String
+  testCaseId    String?
+  position      Int
+  key           String
+  title         String
+  preconditions String?
+  priority      Priority
+  type          CaseType
+  suiteName     String?
+  storyKey      String?
+  storyTitle    String?
+  status        CaseRunStatus @default(UNTESTED)
+  run           TestRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  testCase      TestCase?     @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+  steps         TestRunStep[]
+
+  @@index([runId])
+}
+
+model TestRunStep {
+  id        String      @id @default(cuid())
+  runCaseId String
+  position  Int
+  action    String
+  expected  String?
+  result    StepResult  @default(UNTESTED)
+  actual    String?
+  updatedAt DateTime    @updatedAt
+  runCase   TestRunCase @relation(fields: [runCaseId], references: [id], onDelete: Cascade)
+
+  @@index([runCaseId])
+}
+
+// A read-only link the client opens without an account. One per closed run.
+model ClientReport {
+  id           String           @id @default(cuid())
+  runId        String           @unique
+  token        String           @unique
+  verdict      Verdict
+  summary      String
+  passwordHash String?
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  viewCount    Int              @default(0)
+  lastViewedAt DateTime?
+  createdById  String
+  createdAt    DateTime         @default(now())
+  run          TestRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  createdBy    User             @relation(fields: [createdById], references: [id])
+  signOff      SignOff?
+  feedback     ReportFeedback[]
+}
+
+model SignOff {
+  id        String       @id @default(cuid())
+  reportId  String       @unique
+  name      String
+  email     String
+  ipAddress String?
+  userAgent String?
+  signedAt  DateTime     @default(now())
+  report    ClientReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+// "Request changes" messages the client sends from the report page.
+model ReportFeedback {
+  id        String       @id @default(cuid())
+  reportId  String
+  name      String
+  email     String
+  message   String
+  createdAt DateTime     @default(now())
+  report    ClientReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+// Personal templates that travel from one client project to the next.
+model LibraryItem {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  category      String
+  title         String
+  preconditions String?
+  priority      Priority  @default(MEDIUM)
+  type          CaseType  @default(FUNCTIONAL)
+  // [{ "action": string, "expected": string | null }]
+  steps         Json
+  usedCount     Int       @default(0)
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy     User      @relation(fields: [createdById], references: [id])
+
+  @@index([workspaceId])
+}
+
+// AI generations per workspace per month (YYYY-MM), for the monthly limit.
+model AiUsage {
+  id          String    @id @default(cuid())
+  workspaceId String
+  month       String
+  count       Int       @default(0)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, month])
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String?
+  createdAt DateTime @default(now())
 }
