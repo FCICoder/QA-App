@@ -62,7 +62,8 @@ npm run pdf:sample
 | `npm run dev` | تشغيل للتطوير على المنفذ 3000 |
 | `npm run build` | بناء نسخة الإنتاج (وبيعمل type check) |
 | `npm run typecheck` | فحص TypeScript بس |
-| `npm run db:migrate` | تطبيق تغييرات `prisma/schema.prisma` على قاعدة البيانات |
+| `npm run db:migrate` | إنشاء migration من تغييرات `prisma/schema.prisma` وتطبيقها محلياً |
+| `npm run db:deploy` | تطبيق الـ migrations الموجودة بس (زي اللي بيحصل على Vercel) |
 | `npm run db:seed` | الحساب التجريبي |
 | `npm run db:studio` | واجهة تتصفح بيها الجداول |
 | `npm run pdf:sample` | PDF تجريبي من غير قاعدة بيانات |
@@ -81,6 +82,13 @@ src/lib/access.ts             جلب البيانات مع التحقق من م�
 src/lib/pdf/                  قالب الـ PDF والخط والرندر
 scripts/pdf-sample.ts         تجربة الـ PDF
 ```
+
+## النشر على Vercel
+
+- Vercel بيشغّل `npm run vercel-build`، وده بيطبّق أي migration جديدة في `prisma/migrations` على قاعدة البيانات قبل البناء. يعني أي تعديل في الجداول بيوصل لوحده مع كل deploy.
+- محتاج `DATABASE_URL` في Environment Variables بتاعة المشروع على Vercel.
+- قاعدة البيانات على Vercel بتبدأ فاضية: اعمل حساب جديد من `/signup`. ماتشغّلش `db:seed` على قاعدة الإنتاج، لأن الحساب التجريبي كلمة سره مكتوبة هنا في الـ README.
+- **تصدير الـ PDF لسه مش شغال على Vercel:** Puppeteer محتاج نسخة Chrome مخصوصة للسيرفرات دي. شغال محلياً عادي.
 
 ## مشاكل متوقعة
 
