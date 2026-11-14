@@ -66,3 +66,36 @@ export function formatDate(d: Date): string {
 export function formatDateTime(d: Date): string {
   return dateTimeFormatter.format(d);
 }
+
+// ---- Test runs ----
+
+export const STEP_RESULTS = ["UNTESTED", "PASSED", "FAILED", "BLOCKED"] as const;
+export type StepResultValue = (typeof STEP_RESULTS)[number];
+export const STEP_RESULT_LABEL: Record<StepResultValue, string> = {
+  UNTESTED: "لم يُنفّذ",
+  PASSED: "نجح",
+  FAILED: "فشل",
+  BLOCKED: "محجوب",
+};
+
+export const CASE_RUN_STATUSES = ["UNTESTED", "IN_PROGRESS", "PASSED", "FAILED", "BLOCKED"] as const;
+export type CaseRunStatusValue = (typeof CASE_RUN_STATUSES)[number];
+export const CASE_RUN_STATUS_LABEL: Record<CaseRunStatusValue, string> = {
+  UNTESTED: "لم يُنفّذ",
+  IN_PROGRESS: "قيد التنفيذ",
+  PASSED: "نجح",
+  FAILED: "فشل",
+  BLOCKED: "محجوب",
+};
+
+export const VERDICTS = ["READY", "READY_WITH_NOTES", "NOT_READY"] as const;
+export type VerdictValue = (typeof VERDICTS)[number];
+export const VERDICT_LABEL: Record<VerdictValue, string> = {
+  READY: "جاهز للإطلاق",
+  READY_WITH_NOTES: "جاهز للإطلاق مع ملاحظات",
+  NOT_READY: "مش جاهز للإطلاق",
+};
+
+export function runKey(n: number): string {
+  return `Run #${n}`;
+}

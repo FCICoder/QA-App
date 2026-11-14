@@ -46,6 +46,7 @@ export default async function ProjectPage({
   const storyFilter = firstParam(sp.story) ?? null;
   const q = (firstParam(sp.q) ?? "").trim();
   const trash = firstParam(sp.trash) === "1";
+  const copied = Number(firstParam(sp.copied) ?? 0);
 
   const [suites, stories, cases, totalActive, noSuiteCount, trashCount] = await Promise.all([
     db.suite.findMany({
@@ -102,6 +103,15 @@ export default async function ProjectPage({
           <p className="text-muted">{project.clientName ?? "بدون عميل"} · {totalActive} حالة</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href={`${base}/runs`} className="btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z" /></svg>
+            Test Runs
+          </Link>
+          <Link href={`/library?project=${project.id}`} className="btn-secondary">من المكتبة</Link>
+          <Link href={`${base}/generate`} className="btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></svg>
+            توليد بالذكاء الاصطناعي
+          </Link>
           <a href={pdfHref} className="btn-secondary">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
             تصدير PDF
@@ -109,6 +119,12 @@ export default async function ProjectPage({
           <Link href={newCaseHref} className="btn-primary">+ Test Case جديد</Link>
         </div>
       </div>
+
+      {copied > 0 ? (
+        <p role="status" className="rounded-[10px] border border-pass/30 bg-pass-soft px-4 py-3 text-sm text-pass-ink">
+          اتضافت {copied} {copied === 1 ? "حالة" : "حالات"} للمشروع. راجعها وعدّل اللي محتاج قبل التنفيذ.
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap items-start gap-6">
         <aside className="flex max-w-full flex-[1_1_260px] flex-col gap-4">

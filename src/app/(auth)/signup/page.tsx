@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 export const metadata: Metadata = { title: "حساب جديد" };
 
 export default async function SignupPage() {
-  if (await getCurrentUser()) redirect("/projects");
+  if (await getCurrentUser()) redirect("/dashboard");
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">

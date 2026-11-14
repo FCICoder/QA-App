@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { exportCasesPdf, pdfResponse } from "@/lib/pdf/export";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function GET(_request: Request, context: { params: Promise<{ caseId: string }> }) {
   const user = await getCurrentUser();
@@ -22,7 +23,7 @@ export async function GET(_request: Request, context: { params: Promise<{ caseId
     return pdfResponse(result);
   } catch (error) {
     console.error("[pdf]", error);
-    return new Response("تعذّر إنشاء ملف الـ PDF. التفاصيل في الـ terminal اللي شغال فيه السيرفر.", {
+    return new Response("تعذّر إنشاء ملف الـ PDF. جرّب تاني بعد شوية.", {
       status: 500,
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
