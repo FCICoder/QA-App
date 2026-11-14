@@ -1,3 +1,4 @@
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { pdfResponse } from "@/lib/pdf/export";
 import { exportRunPdf } from "@/lib/pdf/run-export";
@@ -13,10 +14,19 @@ export async function GET(request: Request, context: { params: Promise<{ token: 
 
   const report = await db.clientReport.findUnique({
     where: { token },
-    select: { id: true, token: true, passwordHash: true, revokedAt: true, expiresAt: true },
+    select: {
+      id: true,
+      token: true,
+      passwordHash: true,
+      revokedAt: true,
+      expiresAt: true,
+      run: { select: { project: { select: { workspaceId: true } } } },
+    },
   });
   if (!report || reportState(report) !== "ok") return new Response("Not found", { status: 404 });
-  if (!(await hasReportAccess(report))) return Response.redirect(new URL(`/r/${token}`, request.url), 303);
+  const viewer = await getCurrentUser();
+  const isMember = viewer?.workspaceId === report.run.project.workspaceId;
+  if (!isMember && !(await hasReportAccess(report))) return Response.redirect(new URL(`/r/${token}`, request.url), 303);
 
   try {
     const result = await exportRunPdf({ report: { token } });

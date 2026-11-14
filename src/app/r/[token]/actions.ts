@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { isEmail, rawStr, str } from "@/lib/forms";
 import { verifyPassword } from "@/lib/password";
@@ -14,6 +15,12 @@ async function openReport(token: string) {
   const report = await loadReport(token);
   if (!report || reportState(report) !== "ok") return null;
   return report;
+}
+
+// Sign-off and feedback must come from the client, not from someone in the QA workspace.
+async function isWorkspaceMember(report: { run: { project: { workspaceId: string } } }) {
+  const viewer = await getCurrentUser();
+  return viewer?.workspaceId === report.run.project.workspaceId;
 }
 
 export async function unlockReport(token: string, _prev: PublicFormState, formData: FormData): Promise<PublicFormState> {
@@ -44,6 +51,7 @@ async function clientInfo() {
 export async function signReport(token: string, _prev: PublicFormState, formData: FormData): Promise<PublicFormState> {
   const report = await openReport(token);
   if (!report || !(await hasReportAccess(report))) return { error: "الرابط ده مش شغال." };
+  if (await isWorkspaceMember(report)) return { error: "الموافقة لازم تكون من العميل نفسه، مش من حد في مساحة العمل." };
   if (report.signOff) return { done: true };
 
   const name = str(formData, "name").slice(0, 120);
@@ -64,6 +72,7 @@ export async function signReport(token: string, _prev: PublicFormState, formData
 export async function sendFeedback(token: string, _prev: PublicFormState, formData: FormData): Promise<PublicFormState> {
   const report = await openReport(token);
   if (!report || !(await hasReportAccess(report))) return { error: "الرابط ده مش شغال." };
+  if (await isWorkspaceMember(report)) return { error: "الرسايل دي للعميل. إنت عضو في مساحة العمل." };
 
   const name = str(formData, "name").slice(0, 120);
   const email = str(formData, "email").toLowerCase().slice(0, 200);

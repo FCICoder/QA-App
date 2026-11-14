@@ -63,7 +63,11 @@ export default async function PublicReportPage({ params }: { params: Promise<{ t
     );
   }
 
-  if (!(await hasReportAccess(report))) {
+  // The QA team can always open their own report; everyone else needs the password if there is one.
+  const viewer = await getCurrentUser();
+  const isMember = viewer?.workspaceId === workspace.id;
+
+  if (!isMember && !(await hasReportAccess(report))) {
     return (
       <Shell>
         <div className="card mx-auto flex max-w-sm flex-col gap-4 p-7">
@@ -78,8 +82,7 @@ export default async function PublicReportPage({ params }: { params: Promise<{ t
   }
 
   // Count the client's visits, not the QA team's own.
-  const viewer = await getCurrentUser();
-  if (!viewer || viewer.workspaceId !== workspace.id) {
+  if (!isMember) {
     await db.clientReport.update({
       where: { id: report.id },
       data: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
@@ -244,6 +247,10 @@ export default async function PublicReportPage({ params }: { params: Promise<{ t
                 وافق {report.signOff.name} على التقرير {formatDateTime(report.signOff.signedAt)}. محضر الاستلام موجود في ملف الـ PDF.
               </span>
             </div>
+          ) : isMember ? (
+            <p className="rounded-[10px] bg-canvas px-4 py-3 text-[15px] leading-7 text-ink-soft">
+              دي معاينة لفريق {workspace.name}: العميل هو اللي بيوافق من هنا باسمه، ومحدش من مساحة العمل يقدر يوافق بداله.
+            </p>
           ) : (
             <SignOffPanel
               signAction={signReport.bind(null, token)}
@@ -261,7 +268,7 @@ export default async function PublicReportPage({ params }: { params: Promise<{ t
         </p>
       </div>
 
-      {!report.signOff ? (
+      {!report.signOff && !isMember ? (
         <div className="fixed inset-x-0 bottom-0 border-t border-line bg-white p-3 sm:hidden">
           <a href="#sign" className="btn-primary min-h-12 w-full text-base">أوافق على التقرير</a>
         </div>
