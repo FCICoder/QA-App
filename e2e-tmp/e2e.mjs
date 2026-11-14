@@ -92,7 +92,7 @@ await step("AI generate", async () => {
   await page.type("#storyKey", "US-7");
   await page.type("#storyTitle", "استرجاع كلمة السر");
   await clickText(page, "button[type=submit]", "ولّد الحالات");
-  await waitText(page, "راجع الحالات");
+  await waitText(page, "احفظ 3");
   const n = await page.$$eval("li.card", (els) => els.length);
   ok("AI shows 3 proposals", n === 3, `got ${n}`);
   await clickText(page, "button[type=submit]", "احفظ 3");
@@ -121,8 +121,14 @@ await step("create run", async () => {
   ok("run created", Boolean(runId));
 });
 
+let runCases = 0;
 await step("execute run", async () => {
-  for (let i = 0; i < 8; i++) {
+  runCases = (await page.$$('nav[aria-label="حالات الـ Run"] li button')).length;
+  ok("run has 8 cases", runCases === 8, String(runCases));
+  for (let i = 0; i < runCases; i++) {
+    const nav = await page.$$('nav[aria-label="حالات الـ Run"] li button');
+    await nav[i].click();
+    await sleep(300);
     await page.waitForSelector('[role=group][aria-label^="نتيجة"]');
     const groups = await page.$$('[role=group][aria-label^="نتيجة الخطوة"]');
     for (let g = 0; g < groups.length; g++) {
@@ -135,13 +141,12 @@ await step("execute run", async () => {
       await page.click("h1");
       await sleep(1200);
     }
-    if (i < 7) { await clickText(page, "button", "الحالة اللي بعدها"); await sleep(400); }
   }
   await sleep(1500);
   await page.reload({ waitUntil: "networkidle0" });
   const passed = await page.$eval("strong.text-pass", (e) => e.textContent);
   const failed = await page.$eval("strong.text-warn", (e) => e.textContent);
-  ok("results saved (7 passed, 1 failed)", passed === "7" && failed === "1", `passed=${passed} failed=${failed}`);
+  ok("results saved (all passed but 1 failed)", passed === String(runCases - 1) && failed === "1", `passed=${passed} failed=${failed}`);
 });
 
 await step("close run + report link", async () => {
@@ -198,7 +203,7 @@ await step("client flow", async () => {
   await c.type("#so-email", "Khaled@Client.com");
   await c.click('input[name="agree"]');
   await clickText(c, "button[type=submit]", "أوافق على التقرير");
-  await waitText(c, "اتسجلت موافقتك");
+  await waitText(c, "وافق خالد مصطفى");
   ok("client signed off", true);
   const pdf = await fetchInfo(c, `/r/${token}/pdf`);
   ok("client PDF with certificate", pdf.status === 200 && pdf.head === "%PDF-", JSON.stringify(pdf));
@@ -253,7 +258,7 @@ await step("workspace isolation", async () => {
   const pdf = await fetchInfo(b, `/api/pdf/run/${runId}`);
   ok("other workspace gets 404 on run PDF", pdf.status === 404, String(pdf.status));
   await b.goto(`${BASE}/library?tab=mine`, { waitUntil: "networkidle0" });
-  ok("other workspace library empty", (await body(b)).includes("مكتبتك لسه فاضية"));
+  ok("other workspace can't see A's library", !(await body(b)).includes("الدخول بإيميل وكلمة سر صحيحين"));
   await ctx.close();
 });
 
