@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* Same palette as the design canvas. */
+@theme {
+  --font-sans: "IBM Plex Sans Arabic", system-ui, sans-serif;
+
+  --color-ink: #16201f;
+  --color-ink-soft: #3e4846;
+  --color-muted: #5b6664;
+  --color-line: #e2e6e4;
+  --color-line-strong: #c5ccca;
+  --color-canvas: #f5f6f4;
+
+  --color-brand: #0f5c63;
+  --color-brand-dark: #0a4247;
+  --color-brand-soft: #e3eff0;
+
+  --color-pass: #0f6b5c;
+  --color-pass-ink: #0e5a3a;
+  --color-pass-soft: #e4f1ea;
+  --color-warn: #9a4f0f;
+  --color-warn-ink: #7a3a0c;
+  --color-warn-soft: #fcebd9;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    min-height: 100vh;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+/* Tailwind v4 can't @apply one component class inside another,
+   so each button lists its full set of utilities. */
+@layer components {
+  .btn-primary {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-secondary {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-line-strong bg-white px-4 text-sm font-semibold text-ink transition-colors hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-danger {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-warn/40 bg-white px-4 text-sm font-semibold text-warn-ink transition-colors hover:bg-warn-soft disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .card {
+    @apply rounded-[14px] border border-line bg-white;
+  }
+  .label {
+    @apply text-sm font-semibold text-ink;
+  }
+  .input {
+    @apply min-h-11 w-full rounded-[10px] border border-line-strong bg-white px-3 text-[15px] text-ink placeholder:text-muted/70;
+  }
+  .textarea {
+    @apply w-full rounded-[10px] border border-line-strong bg-white px-3 py-2 text-[15px] leading-7 text-ink placeholder:text-muted/70;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold;
+  }
+}

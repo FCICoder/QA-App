@@ -1,0 +1,185 @@
+// Tasleem data model.
+// Every query is scoped to a Workspace: Project carries workspaceId,
+// and everything under a project is reached through it.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum CaseType {
+  FUNCTIONAL
+  REGRESSION
+  NEGATIVE
+  BOUNDARY
+  UI_RTL
+  SECURITY
+  OTHER
+}
+
+enum CaseStatus {
+  DRAFT
+  READY
+  DEPRECATED
+}
+
+enum CaseLanguage {
+  AR
+  EN
+}
+
+model User {
+  id           String            @id @default(cuid())
+  name         String
+  email        String            @unique
+  passwordHash String
+  createdAt    DateTime          @default(now())
+  sessions     Session[]
+  memberships  Membership[]
+  createdCases TestCase[]        @relation("CaseCreatedBy")
+  versions     TestCaseVersion[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Workspace {
+  id          String       @id @default(cuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  projects    Project[]
+}
+
+model Membership {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        Role      @default(OWNER)
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+model Project {
+  id          String      @id @default(cuid())
+  workspaceId String
+  name        String
+  clientName  String?
+  // Last TC number used in this project (TC-001, TC-002, ...).
+  caseCounter Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suites      Suite[]
+  stories     UserStory[]
+  cases       TestCase[]
+
+  @@index([workspaceId])
+}
+
+model Suite {
+  id        String     @id @default(cuid())
+  projectId String
+  name      String
+  position  Int        @default(0)
+  createdAt DateTime   @default(now())
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  cases     TestCase[]
+
+  @@index([projectId])
+}
+
+model UserStory {
+  id        String     @id @default(cuid())
+  projectId String
+  // The client's own reference, e.g. US-12 or a Jira key.
+  key       String
+  title     String?
+  url       String?
+  createdAt DateTime   @default(now())
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  cases     TestCase[]
+
+  @@unique([projectId, key])
+}
+
+model TestCase {
+  id            String            @id @default(cuid())
+  projectId     String
+  number        Int
+  suiteId       String?
+  userStoryId   String?
+  title         String
+  preconditions String?
+  priority      Priority          @default(MEDIUM)
+  type          CaseType          @default(FUNCTIONAL)
+  status        CaseStatus        @default(DRAFT)
+  language      CaseLanguage      @default(AR)
+  version       Int               @default(1)
+  createdById   String
+  // Soft delete: a deleted case goes to the trash and can be restored.
+  deletedAt     DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  project       Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suite         Suite?            @relation(fields: [suiteId], references: [id], onDelete: SetNull)
+  story         UserStory?        @relation(fields: [userStoryId], references: [id], onDelete: SetNull)
+  createdBy     User              @relation("CaseCreatedBy", fields: [createdById], references: [id])
+  steps         TestStep[]
+  versions      TestCaseVersion[]
+
+  @@unique([projectId, number])
+  @@index([projectId, deletedAt])
+}
+
+model TestStep {
+  id         String   @id @default(cuid())
+  testCaseId String
+  position   Int
+  action     String
+  expected   String?
+  testCase   TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@index([testCaseId])
+}
+
+model TestCaseVersion {
+  id          String   @id @default(cuid())
+  testCaseId  String
+  version     Int
+  // Full copy of the case and its steps at this version.
+  snapshot    Json
+  createdById String
+  createdAt   DateTime @default(now())
+  testCase    TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@unique([testCaseId, version])
+}
